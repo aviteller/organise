@@ -57,16 +57,76 @@ func getOne(table string, id int) *sql.Row {
 
 }
 
+func updateOne(table string, id interface{}, args map[string]interface{}) int64 {
+	keys := make([]string, 0, len(args)+1)
+	values := make([]interface{}, 0, len(args)+1)
+
+	for k, v := range args {
+		if k == "id" {
+			continue
+		}
+		keys = append(keys, k)
+		values = append(values, v)
+
+	}
+
+	s := make([]interface{}, len(values))
+	for i, v := range values {
+		s[i] = fmt.Sprint(v)
+	}
+
+	keys = append(keys, "updated_at")
+	s = append(s, time.Now().Format(time.RFC3339))
+	s = append(s, id)
+
+	sqlStatment := "UPDATE " + table + " SET " + strings.Join(keys, "=?,") + "=? WHERE id = ?"
+
+	// fmt.Println(sqlStatment)
+	// fmt.Println(s)
+
+	stmt, err := getDB().Prepare(sqlStatment)
+
+	if err != nil {
+		panic(err)
+	}
+	res, err := stmt.Exec(s...)
+
+	if err != nil {
+		panic(err)
+	}
+
+	lastID, err := res.LastInsertId()
+
+	return lastID
+}
+
+func getValues(args map[string]interface{}) []interface{} {
+	var values []interface{}
+	for _, value := range args {
+		values = append(values, value)
+	}
+	return values
+}
+
 func getAllByID(table string, field string, id int, args map[string]interface{}) *sql.Rows {
 
 	orderBy := ""
+	between := ""
+	// fmt.Println(args)
+
+	if args["between"] != nil {
+		betweenSlice := strings.Split(args["between"].(string), ",")
+		between = " AND " + betweenSlice[0] + " BETWEEN '" + betweenSlice[1] + "' AND '" + betweenSlice[2] + "' "
+		// fmt.Println("between", between)
+		// between = args["orderBy"].(string)
+	}
 
 	if args["orderBy"] != nil {
 
 		orderBy = args["orderBy"].(string)
 	}
 
-	sqlStatment := "SELECT * FROM " + table + " WHERE " + field + " = ? AND deleted = 0 " + orderBy
+	sqlStatment := "SELECT * FROM " + table + " WHERE " + field + " = ? AND deleted = 0 " + between + orderBy
 
 	fmt.Println(sqlStatment)
 
@@ -147,10 +207,14 @@ func getAll(table string, args map[string]interface{}) *sql.Rows {
 	if args["orderBy"] != nil {
 		orderBy = args["orderBy"].(string)
 	}
+	selectFields := "*"
+	if args["fields"] != nil {
+		selectFields = args["fields"].(string)
+	}
 
-	sqlStatment := "SELECT * FROM " + table + " WHERE deleted = 0 " + orderBy
+	sqlStatment := "SELECT " + selectFields + " FROM " + table + " WHERE deleted = 0 " + orderBy
 
-	// fmt.Println(sqlStatment)
+	fmt.Println(sqlStatment)
 	rows, err := getDB().Query(sqlStatment)
 
 	HandleError(err)

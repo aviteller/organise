@@ -41,6 +41,38 @@ func addTask(w http.ResponseWriter, r *http.Request) {
 	res["id"] = returnId
 	Respond(w, res)
 }
+func addTodo(w http.ResponseWriter, r *http.Request) {
+	var gi map[string]interface{}
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&gi)
+	HandleError(err)
+	gi["table"] = "todos"
+
+	returnId := generalSqlInput(gi)
+	var returnTodo Todo
+	row := getOne("todos", int(returnId))
+	row.Scan(&returnTodo.ID, &returnTodo.PersonID, &returnTodo.Content, &returnTodo.Priority, &returnTodo.Complete, &returnTodo.CreatedAt, &returnTodo.UpdatedAt, &returnTodo.Deleted)
+
+	res := Message(true, "success")
+	res["row"] = returnTodo
+	Respond(w, res)
+}
+func addScheduleItem(w http.ResponseWriter, r *http.Request) {
+	var gi map[string]interface{}
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&gi)
+	HandleError(err)
+	gi["table"] = "schedule"
+
+	returnId := generalSqlInput(gi)
+	var s Schedule
+	row := getOne("schedule", int(returnId))
+	row.Scan(&s.ID, &s.PersonID, &s.ScheduleCategoryID, &s.ScheduleFrequencyID, &s.ScheduleTime, &s.StartDate, &s.EndDate, &s.Desc, &s.CreatedAt, &s.UpdatedAt, &s.Deleted)
+
+	res := Message(true, "success")
+	res["row"] = s
+	Respond(w, res)
+}
 
 func logger(w http.ResponseWriter, r *http.Request) {
 
@@ -145,33 +177,6 @@ func generalQueryRoute(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getAllTaskTypes(w http.ResponseWriter, r *http.Request) {
-	// var tasktypes []TaskCategory
-	// rows := getAll("task_types", ArgsMap{})
-
-	// for rows.Next() {
-	// 	var tt TaskCategory
-	// 	rows.Scan(&tt.ID, &tt.Name, &tt.CreatedAt, &tt.UpdatedAt, &tt.Deleted)
-	// 	tasktypes = append(tasktypes, tt)
-	// }
-	// res := Message(true, "success")
-
-	// res["task_types"] = tasktypes
-	// Respond(w, res)
-}
-
-// func getTasks(id int) []Task {
-// 	var tasks []Task
-// 	rows := getAllByID("tasks", "person_id", id, ArgsMap{"orderBy": "ORDER BY due_date desc"})
-// 	for rows.Next() {
-// 		var t Task
-// 		rows.Scan(&t.ID, &t.PersonID, &t.TaskCategoryID, &t.DueDate, &t.DueTime, &t.Desc, &t.CreatedAt, &t.UpdatedAt, &t.Deleted)
-// 		tasks = append(tasks, t)
-// 	}
-
-// 	return tasks
-// }
-
 func getParentPersonLink(id string) []int {
 	var parentPersonIds []int
 	ids := generalQuery("SELECT person_id FROM person_parent_link WHERE parent_id = "+id, false)
@@ -201,10 +206,91 @@ func getChildren(parent_id int) []Person {
 	return children
 }
 
-func getTodos(w http.ResponseWriter, r *http.Request) {
+func updateTodo(w http.ResponseWriter, r *http.Request) {
+	var t map[string]interface{}
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&t)
+	HandleError(err)
+	fmt.Println("id", t["id"])
+	if t["id"] != nil {
+		// fmt.Println("todo", t)
+		fmt.Println("here")
+		updateOne("todos", t["id"], t)
+	}
+	res := Message(true, "success")
+	Respond(w, res)
+}
+func updateScheduleItem(w http.ResponseWriter, r *http.Request) {
+	var t map[string]interface{}
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&t)
+	HandleError(err)
+	fmt.Println("id", t["id"])
+	if t["id"] != nil {
+		// fmt.Println("todo", t)
+		fmt.Println("here")
+		updateOne("schedule", t["id"], t)
+	}
+	res := Message(true, "success")
+	Respond(w, res)
+}
+
+func getScheduleHelpers(w http.ResponseWriter, r *http.Request) {
+
+	var sCategories []interface{}
+	var sFrequncies []interface{}
+
+	rows := getAll("schedule_category", ArgsMap{"fields": "id, title"})
+
+	for rows.Next() {
+		s := struct {
+			ID    int    `json:"id"`
+			Title string `json:"title"`
+		}{}
+		rows.Scan(&s.ID, &s.Title)
+		sCategories = append(sCategories, s)
+	}
+	fmt.Println("here")
+
+	rows = getAll("schedule_frequency", ArgsMap{"fields": "id, title"})
+	for rows.Next() {
+		s := struct {
+			ID    int    `json:"id"`
+			Title string `json:"title"`
+		}{}
+		rows.Scan(&s.ID, &s.Title)
+		sFrequncies = append(sFrequncies, s)
+	}
+
+	res := Message(true, "success")
+	res["schedule_categories"] = sCategories
+	res["schedule_frequencies"] = sFrequncies
+	Respond(w, res)
+}
+
+func getHelpers(w http.ResponseWriter, r *http.Request) {
+	queryParams := r.URL.Query()
+
+	switch queryParams.Get("type") {
+	case "schedules":
+		getScheduleHelpers(w, r)
+	default:
+		res := Message(true, "failure")
+		res["data"] = "To helper found"
+		Respond(w, res)
+	}
+
+}
+
+func getTodosByPersonID(w http.ResponseWriter, r *http.Request) {
 	var todos []Todo
 	routeID := getRouteID(r)
-	rows := getAllByID("todos", "person_id", routeID, ArgsMap{"orderBy": "ORDER BY priority asc"})
+
+	// get query params
+	queryParams := r.URL.Query()
+	fmt.Println(queryParams)
+
+	rows := getAllByID("todos", "person_id", routeID, ArgsMap{"orderBy": "ORDER BY complete, priority asc"})
 
 	for rows.Next() {
 		var todo Todo
@@ -214,6 +300,27 @@ func getTodos(w http.ResponseWriter, r *http.Request) {
 
 	res := Message(true, "success")
 	res["todos"] = todos
+	Respond(w, res)
+}
+
+func getScheduleItemsByPersonID(w http.ResponseWriter, r *http.Request) {
+	var schedule_items []Schedule
+	routeID := getRouteID(r)
+
+	// get query params
+	queryParams := r.URL.Query()
+	fmt.Println(queryParams)
+
+	rows := getAllByID("schedule", "person_id", routeID, ArgsMap{"orderBy": "ORDER BY created_at asc"})
+
+	for rows.Next() {
+		var s Schedule
+		rows.Scan(&s.ID, &s.PersonID, &s.ScheduleCategoryID, &s.ScheduleFrequencyID, &s.ScheduleTime, &s.StartDate, &s.EndDate, &s.Desc, &s.CreatedAt, &s.UpdatedAt, &s.Deleted)
+		schedule_items = append(schedule_items, s)
+	}
+
+	res := Message(true, "success")
+	res["schedule_items"] = schedule_items
 	Respond(w, res)
 }
 
@@ -230,6 +337,34 @@ func getPeople(w http.ResponseWriter, r *http.Request) {
 
 	res := Message(true, "success")
 	res["people"] = people
+	Respond(w, res)
+}
+
+//func that gets all Schedule from database in date range
+func getScheduleByDateRange(w http.ResponseWriter, r *http.Request) {
+	var schedule []Schedule
+	routeID := getRouteID(r)
+
+	// get query params
+	queryParams := r.URL.Query()
+	fmt.Println(queryParams)
+
+	// add query params to args map
+	args := ArgsMap{
+		"orderBy": "ORDER BY created_at asc",
+		"between": queryParams.Get("between"),
+	}
+
+	rows := getAllByID("schedule", "person_id", routeID, args)
+
+	for rows.Next() {
+		var s Schedule
+		rows.Scan(&s.ID, &s.PersonID, &s.ScheduleCategoryID, &s.ScheduleFrequencyID, &s.ScheduleTime, &s.StartDate, &s.EndDate, &s.Desc, &s.CreatedAt, &s.UpdatedAt, &s.Deleted)
+		schedule = append(schedule, s)
+	}
+
+	res := Message(true, "success")
+	res["schedule"] = schedule
 	Respond(w, res)
 }
 
@@ -256,7 +391,19 @@ func router(w http.ResponseWriter, r *http.Request) {
 		case "greet":
 			greet(w, r)
 		case "todos":
-			getTodos(w, r)
+			if pathLength > 1 {
+				getTodosByPersonID(w, r)
+			}
+		case "schedules":
+			if pathLength > 1 {
+				getScheduleItemsByPersonID(w, r)
+			}
+		case "calendar":
+			if pathLength > 1 {
+				getScheduleByDateRange(w, r)
+			}
+		case "helpers":
+			getHelpers(w, r)
 
 		case "people":
 			if pathLength > 1 {
@@ -273,10 +420,6 @@ func router(w http.ResponseWriter, r *http.Request) {
 				//getTask(w, r)
 			}
 
-		case "tasktypes":
-
-			getAllTaskTypes(w, r)
-
 		default:
 			fmt.Fprintf(w, "GET METHOD: %s DOES NOT EXIST", path)
 		}
@@ -289,9 +432,21 @@ func router(w http.ResponseWriter, r *http.Request) {
 			generalSqlInputRoute(w, r)
 		case "tasks":
 			addTask(w, r)
+		case "todos":
+			addTodo(w, r)
+		case "schedules":
+			addScheduleItem(w, r)
 
 		default:
 			fmt.Fprintf(w, "POST METHOD: %s DOES NOT EXIST", path)
+		}
+	case "PUT":
+		switch pathParams[0] {
+		case "todos":
+			updateTodo(w, r)
+		case "schedules":
+			updateScheduleItem(w, r)
+
 		}
 	case "DELETE":
 		if pathLength > 1 {

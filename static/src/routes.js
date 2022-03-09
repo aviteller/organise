@@ -3,7 +3,7 @@ import Person from './routes/Person.svelte'
 import Task from './routes/Task.svelte'
 import GeneralInput from "./routes/GeneralInput.svelte";
 import GeneralGet from "./routes/GeneralGet.svelte";
-import Calender from "./routes/Calender.svelte";
+import Calender from "./components/calender/Calender.svelte";
 // import Project from './routes/Project.svelte'
 // import Task from './routes/Task.svelte'
 import NotFound from './routes/NotFound.svelte'
@@ -13,7 +13,7 @@ export const routes = {
     '/': Home,
     "/input": GeneralInput,
     "/get": GeneralGet,
-    "/calender": Calender,
+    "/calender/:id": Calender,
     '/people/:id': Person,
     '/tasks/:id': Task,
     // '/tasks/:id': Task,

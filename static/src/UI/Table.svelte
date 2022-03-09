@@ -8,7 +8,7 @@
   export let pagination = false;
   export let sortBy = null;
 
-  console.log(classes);
+
   import SortTab from "./SortTab.svelte";
 
   const setSort = (sort) => {

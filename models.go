@@ -1,22 +1,22 @@
 package main
 
 type Schedule struct {
-	ID                 int    `json:"id"`
-	PersonID           int    `json:"person_id"`
-	ScheduleCategoryID int    `json:"schedule_cat_id"`
-	ScheduleFrequency  int    `json:"schedule_frequency_id"`
-	ScheduleTime       string `json:"schedule_time"`
-	StartDate          string `json:"start_date,omitempty"`
-	EndDate            string `json:"end_date,omitempty"`
-	Desc               string `json:"desc"`
-	CreatedAt          string `json:"created_at"`
-	UpdatedAt          string `json:"updated_at"`
-	Deleted            bool   `json:"deleted"`
+	ID                  int    `json:"id"`
+	PersonID            int    `json:"person_id"`
+	ScheduleCategoryID  int    `json:"schedule_cat_id"`
+	ScheduleFrequencyID int    `json:"schedule_frequency_id"`
+	ScheduleTime        string `json:"schedule_time"`
+	StartDate           string `json:"start_date,omitempty"`
+	EndDate             string `json:"end_date,omitempty"`
+	Desc                string `json:"desc"`
+	CreatedAt           string `json:"created_at"`
+	UpdatedAt           string `json:"updated_at"`
+	Deleted             bool   `json:"deleted"`
 }
 
 type ScheduleCategory struct {
 	ID        int    `json:"id"`
-	Name      string `json:"name"`
+	Title     string `json:"title"`
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
 	Deleted   bool   `json:"deleted"`
@@ -25,7 +25,7 @@ type ScheduleCategory struct {
 type ScheduleFrequency struct {
 	ID        int    `json:"id"`
 	Title     string `json:"title"`
-	CreatedAt string `json:"created_at"`
+	CreatedAt string `json:"created_at,omitempty"`
 	UpdatedAt string `json:"updated_at"`
 	Deleted   bool   `json:"deleted"`
 }
